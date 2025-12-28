@@ -4,8 +4,9 @@ This guide explains how to use CronSS (Cron Stop/Start) in Jenkins pipelines for
 
 ## Features for Jenkins
 
+- **Docker Support**: Manage cronjobs inside running containers (sidecars/service containers)
 - **Suspend/Resume Workflow**: safely stop specific jobs and restart them later
-- Environment variable support (CRON_HOST, CRON_USER, etc.)
+- Environment variable support (CRON_HOST, CRON_USER, CRON_DOCKER_CONTAINER)
 - JSON output for parsing in Jenkins
 - Non-interactive operation
 - **Local Mode**: Can manage the agent's own cronjobs using `--local`
@@ -14,8 +15,9 @@ This guide explains how to use CronSS (Cron Stop/Start) in Jenkins pipelines for
 
 Set these in your Jenkins job parameters or environment:
 
-- `CRON_HOST` - SSH hostname (required, unless using `--local`)
+- `CRON_HOST` - SSH hostname (required, unless using `--local` or `--docker`)
 - `CRON_USER` - SSH username (default: current user)
+- `CRON_DOCKER_CONTAINER` - Docker container name/ID (for Docker mode)
 - `CRON_STATE_NAME` - ID for suspend/resume or save/restore operations
 
 ## Jenkins Pipeline Examples

@@ -37,11 +37,11 @@ chmod +x cronss.sh
 
 ### Options
 
-- `-h, --host HOST` - SSH host (required unless --local is used)
-- `-u, --user USER` - SSH user (default: current user)
-- `-p, --port PORT` - SSH port (default: 22)
-- `-i, --identity FILE` - SSH identity file path
-- `--docker CONTAINER` - Target a running Docker container (bypasses SSH)
+- `-h, --host HOST` - SSH host (or use CRON_HOST env var)
+- `-u, --user USER` - SSH user (or use CRON_USER env var, default: current user)
+- `-p, --port PORT` - SSH port (or use CRON_PORT env var, default: 22)
+- `-i, --identity FILE` - SSH identity file (or use CRON_IDENTITY env var)
+- `--docker CONTAINER` - Target a running Docker container (or use CRON_DOCKER_CONTAINER env var)
 - `--local` - Run on local machine (bypasses SSH)
 - `--json` - Output in JSON format (for Jenkins/automation)
 

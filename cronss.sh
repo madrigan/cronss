@@ -36,7 +36,7 @@ OPTIONS:
     -u, --user USER         SSH user (or use CRON_USER env var, default: current user)
     -p, --port PORT         SSH port (or use CRON_PORT env var, default: 22)
     -i, --identity FILE     SSH identity file (or use CRON_IDENTITY env var)
-    --docker CONTAINER      Target a running Docker container (bypasses SSH)
+    --docker CONTAINER      Target a running Docker container (or use CRON_DOCKER_CONTAINER env var)
     --local                 Run on local machine (bypasses SSH)
     --json                  Output in JSON format (for Jenkins/automation)
     --help                  Show this help message
@@ -70,6 +70,7 @@ EOF
 [ -n "$CRON_USER" ] && SSH_USER="$CRON_USER"
 [ -n "$CRON_PORT" ] && SSH_PORT="$CRON_PORT"
 [ -n "$CRON_IDENTITY" ] && SSH_IDENTITY="$CRON_IDENTITY"
+[ -n "$CRON_DOCKER_CONTAINER" ] && DOCKER_CONTAINER="$CRON_DOCKER_CONTAINER"
 
 # Argument Parsing
 while [[ $# -gt 0 ]]; do
@@ -311,38 +312,42 @@ modify_cron() {
             stop)
                 for r in "${target_refs[@]}"; do if [ "$ref" -eq "$r" ]; then should_change=1; break; fi; done
                 if [ $should_change -eq 1 ] && [[ ! $line =~ ^# ]]; then
-                    new_line="$DISABLED_TAG $line"; ((modified+=1))
+                    new_line="$DISABLED_TAG $line"; ((modified+=1)); matched_refs+=($ref)
                 fi
                 ;;
             start)
                 for r in "${target_refs[@]}"; do if [ "$ref" -eq "$r" ]; then should_change=1; break; fi; done
                 if [ $should_change -eq 1 ] && [[ $line == "$DISABLED_TAG"* ]]; then
-                    new_line="${line#$DISABLED_TAG }"; ((modified+=1))
+                    new_line="${line#$DISABLED_TAG }"; ((modified+=1)); matched_refs+=($ref)
                 fi
                 ;;
             pattern-stop)
                 if [[ ! $line =~ ^# ]] && echo "$line" | grep -qE "$target"; then
-                    new_line="$DISABLED_TAG $line"; ((modified+=1))
+                    new_line="$DISABLED_TAG $line"; ((modified+=1)); matched_refs+=($ref)
                 elif [[ $line == "$DISABLED_TAG"* ]] && echo "${line#$DISABLED_TAG }" | grep -qE "$target"; then
                     : # matched but already stopped
                 fi
                 ;;
             pattern-start)
                 if [[ $line == "$DISABLED_TAG"* ]] && echo "${line#$DISABLED_TAG }" | grep -qE "$target"; then
-                    new_line="${line#$DISABLED_TAG }"; ((modified+=1))
+                    new_line="${line#$DISABLED_TAG }"; ((modified+=1)); matched_refs+=($ref)
                 fi
                 ;;
             suspend)
                 if [[ ! $line =~ ^# ]] && echo "$line" | grep -qE "$target"; then
                     new_line="$DISABLED_TAG $line"; ((modified+=1))
                     suspended_lines+=("$line")
+                    matched_refs+=($ref)
                 fi
                 ;;
             resume)
                 if [[ $line == "$DISABLED_TAG"* ]]; then
                     local unc="${line#$DISABLED_TAG }"
                     for s in "${target_suspended[@]}"; do
-                        if [ "$unc" == "$s" ]; then new_line="$unc"; ((modified+=1)); break; fi
+                        if [ "$unc" == "$s" ]; then 
+                            new_line="$unc"; ((modified+=1)); matched_refs+=($ref)
+                            break
+                        fi
                     done
                 fi
                 ;;
@@ -355,12 +360,34 @@ modify_cron() {
     if [ $modified -gt 0 ]; then
         local new_content=$(printf "%s\n" "${lines[@]}")
         set_remote_crontab "$new_content"
+        local track_file_out=""
         if [ "$mode" == "suspend" ]; then
-            printf "%s\n" "${suspended_lines[@]}" > "${STATE_DIR}/${prefix}_${suspend_id}.suspend"
+            track_file_out="${STATE_DIR}/${prefix}_${suspend_id}.suspend"
+            printf "%s\n" "${suspended_lines[@]}" > "$track_file_out"
         fi
-        echo -e "${GREEN}Successfully $mode-ed $modified cronjob(s)${NC}"
+        
+        if [ "$JSON_OUTPUT" -eq 1 ]; then
+            local matched_json="["
+            local first=1
+            for mr in "${matched_refs[@]}"; do
+                if [ $first -eq 1 ]; then matched_json+="$mr"; first=0; else matched_json+=",$mr"; fi
+            done
+            matched_json+="]"
+            
+            local id_field=""
+            [ "$mode" == "suspend" ] && id_field=",\"id\": \"$suspend_id\",\"track_file\": \"$track_file_out\""
+            [ "$mode" == "resume" ] && id_field=",\"id\": \"$target\""
+            
+            echo "{\"status\": \"success\", \"modified\": $modified, \"action\": \"$mode\", \"matched_refs\": $matched_json${id_field}}"
+        else
+            echo -e "${GREEN}Successfully $mode-ed $modified cronjob(s)${NC}"
+        fi
     else
-        echo -e "${YELLOW}No changes made${NC}"
+        if [ "$JSON_OUTPUT" -eq 1 ]; then
+            echo "{\"status\": \"success\", \"modified\": 0, \"action\": \"$mode\", \"matched_refs\": []}"
+        else
+            echo -e "${YELLOW}No changes made${NC}"
+        fi
     fi
 }
 

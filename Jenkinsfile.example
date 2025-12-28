@@ -27,7 +27,7 @@ pipeline {
         CRON_USER = "${params.SSH_USER}"
         CRON_IDENTITY = credentials('ssh-deploy-key')
         CRON_STATE_NAME = "jenkins-${env.BUILD_ID}"
-        CRONSS_DIR = "${WORKSPACE}/cronstop"
+        CRONSS_DIR = "."
     }
 
     stages {
