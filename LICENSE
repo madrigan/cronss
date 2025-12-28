@@ -1,0 +1,45 @@
+MADRIGAN PROPRIETARY LICENSE AGREEMENT
+
+Copyright (c) 2024-2025 MADRIGAN. All Rights Reserved.
+
+IMPORTANT: PLEASE READ THIS LICENSE AGREEMENT CAREFULLY.
+
+1. DEFINITIONS
+   "Software" refers to the code, scripts, documentation, and associated files contained in this repository (CronSS).
+   "Provider" refers to MADRIGAN.
+   "Licensee" refers to the individual or entity accessing or using the Software.
+   "Commercial Use" means use of the Software for the purpose of revenue generation, business operations, or any professional or employment-related activity.
+
+2. LICENSE GRANT (PERSONAL USE)
+   The Provider hereby grants the Licensee a revocable, non-exclusive, non-transferable, limited license to download, install, and use the Software solely for:
+   a) Personal, non-commercial purposes.
+   b) Educational or evaluation purposes.
+
+   Under this Personal Use grant, the Licensee may NOT:
+   i.   Use the Software for any Commercial Use.
+   ii.  Redistribute, sublicense, rent, lease, or sell the Software.
+   iii. Modify the Software for the purpose of redistribution.
+
+3. COMMERCIAL USE
+   Commercial Use of this Software is STRICTLY PROHIBITED unless the Licensee has obtained a specific Commercial License Grant from MADRIGAN.
+   
+   Proof of such grant may be established through:
+   a) A signed commercial contract or license agreement with MADRIGAN.
+   b) A valid invoice from MADRIGAN explicitly listing a license for this Software.
+   
+   Entities without such a grant must immediately cease use of the Software or contact MADRIGAN to obtain a license.
+
+4. PROPRIETARY RIGHTS
+   This Software is proprietary and is NOT free or open-source software. All right, title, and interest in and to the Software, including all intellectual property rights, remain with MADRIGAN.
+
+5. RESTRICTIONS
+   Except as expressly permitted in this Agreement, Licensee shall not:
+   a) Remove or alter any copyright notices or proprietary markings.
+   b) Publish, distribute, or make the Software available to the public or third parties.
+   c) Create derivative works for public distribution.
+
+6. CONTRIBUTIONS
+   This repository is read-only for the public. MADRIGAN does not accept public contributions, pull requests, or code submissions. Any unsolicited contributions will be rejected to maintain the proprietary nature of the codebase.
+
+7. DISCLAIMER OF WARRANTY
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

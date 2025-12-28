@@ -1,0 +1,118 @@
+// Example Jenkinsfile for CronSS
+// Copy this file to your repository and modify as needed
+
+pipeline {
+    agent any
+
+    parameters {
+        string(
+            name: 'TARGET_SERVER',
+            defaultValue: 'prod-server.example.com',
+            description: 'Target server hostname'
+        )
+        string(
+            name: 'SSH_USER',
+            defaultValue: 'admin',
+            description: 'SSH username for remote server'
+        )
+        string(
+            name: 'CRON_PATTERN',
+            defaultValue: 'backup|sync',
+            description: 'Pattern to match cronjobs (regex)'
+        )
+    }
+
+    environment {
+        CRON_HOST = "${params.TARGET_SERVER}"
+        CRON_USER = "${params.SSH_USER}"
+        CRON_IDENTITY = credentials('ssh-deploy-key')
+        CRON_STATE_NAME = "jenkins-${env.BUILD_ID}"
+        CRONSS_DIR = "${WORKSPACE}/cronstop"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Suspend Cronjobs') {
+            steps {
+                script {
+                    echo "=== Suspending cronjobs matching: ${params.CRON_PATTERN} ==="
+                    
+def result = sh(
+                        script: """
+                            cd ${CRONSS_DIR}
+                            ./cronss.sh --json suspend "${params.CRON_PATTERN}" "${CRON_STATE_NAME}"
+                        """,
+                        returnStdout: true
+                    ).trim()
+                    
+def lines = result.split('\n')
+def jsonResult = readJSON text: lines[lines.length - 1]
+                    
+                    echo "Status: ${jsonResult.status}"
+                    if (jsonResult.status == 'success') {
+                        echo "Suspended ${jsonResult.modified} jobs"
+                    } else {
+                        echo "No jobs matched the pattern (or already suspended)"
+                    }
+                }
+            }
+        }
+
+        stage('Maintenance Tasks') {
+            steps {
+                echo "=== Running maintenance tasks ==="
+                // Your tasks here
+                sh "sleep 5" 
+            }
+        }
+
+        stage('Resume Cronjobs') {
+            steps {
+                script {
+                    echo "=== Resuming cronjobs ==="
+                    
+def result = sh(
+                        script: """
+                            cd ${CRONSS_DIR}
+                            ./cronss.sh --json resume "${CRON_STATE_NAME}"
+                        """,
+                        returnStdout: true
+                    ).trim()
+                    
+def lines = result.split('\n')
+def jsonResult = readJSON text: lines[lines.length - 1]
+                    
+                    echo "Status: ${jsonResult.status}"
+                    echo "Resumed ${jsonResult.modified} jobs"
+                }
+            }
+        }
+    }
+
+    post {
+        failure {
+            script {
+                echo "=== Pipeline failed - attempting to resume cronjobs ==="
+                sh """
+                    cd ${CRONSS_DIR}
+                    ./cronss.sh resume "${CRON_STATE_NAME}" || true
+                """
+            }
+        }
+        
+        always {
+             script {
+                echo "=== Final Cron List ==="
+                sh """
+                    cd ${CRONSS_DIR}
+                    ./cronss.sh list || true
+                """
+            }
+        }
+    }
+}
