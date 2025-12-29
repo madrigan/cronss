@@ -22,7 +22,61 @@ Set these in your Jenkins job parameters or environment:
 
 ## Jenkins Pipeline Examples
 
-### Recommended: Suspend/Resume Workflow
+### Best Practice: Safe Maintenance Mode (Crash-Resistant)
+
+If your Jenkins agent crashes or loses network connectivity during deployment, the standard `try/finally` or `post { failure }` blocks might not execute, leaving the remote server in a suspended state.
+
+Use `suspend-guarded` to prevent this. The remote server will automatically revert itself if Jenkins doesn't check in.
+
+```groovy
+pipeline {
+    agent any
+
+    environment {
+        CRON_HOST = 'prod-server.example.com'
+        CRON_STATE_NAME = "jenkins-${env.BUILD_ID}"
+        CRON_PATTERN = 'backup|sync'
+        // Allow 30 minutes for deployment. If not resumed by then, remote server auto-reverts.
+        MAINTENANCE_WINDOW = '30' 
+    }
+
+    stages {
+        stage('Suspend Cronjobs (Guarded)') {
+            steps {
+                script {
+                    sh '''
+                        cd /path/to/cronss
+                        # Suspend jobs and arm the dead man's switch on the remote host
+                        ./cronss.sh suspend-guarded "${CRON_PATTERN}" ${MAINTENANCE_WINDOW} "${CRON_STATE_NAME}"
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy Application') {
+            steps {
+                echo 'Deploying application...'
+                // Heavy deployment tasks...
+                sleep 5 // Simulating work
+            }
+        }
+
+        stage('Resume Cronjobs') {
+            steps {
+                script {
+                    sh '''
+                        cd /path/to/cronss
+                        # Resuming normally disarms the safety switch automatically
+                        ./cronss.sh resume "${CRON_STATE_NAME}"
+                    '''
+                }
+            }
+        }
+    }
+}
+```
+
+### Standard: Suspend/Resume Workflow
 
 This workflow is safer than full state restore as it only touches the jobs it stopped.
 

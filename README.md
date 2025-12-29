@@ -47,8 +47,9 @@ chmod +x cronss.sh
 
 ### Commands
 
-- `list` - List all cronjobs with reference numbers
+- `list` - List all cronjobs with reference numbers and show active suspended sessions
 - `suspend <PATTERN> [ID]` - Stop jobs matching pattern and save tracking info
+- `suspend-guarded <PATTERN> <MINUTES> [ID]` - Suspend jobs with an auto-revert safety net on the remote host
 - `resume <ID>` - Resume jobs that were stopped in a specific session ID
 - `save [NAME]` - Save current cron state (default: timestamp)
 - `restore [NAME]` - Restore from saved full state
@@ -56,9 +57,32 @@ chmod +x cronss.sh
 - `start <REFS>` - Start cronjobs by reference numbers
 - `stop-pattern <PATTERN>` - Stop cronjobs matching pattern
 - `start-pattern <PATTERN>` - Start cronjobs matching pattern
+- `stop-all` - Stop ALL cronjobs
+- `start-all` - Start ALL cronjobs
 - `list-states` - List all saved full states
 - `list-suspended` - List all suspended sessions
 - `demo` - Run an interactive live demo using a temporary Docker container
+
+## Safe Maintenance Mode (Dead Man's Switch)
+
+If your deployment pipeline crashes or network connectivity is lost after suspending cronjobs, the remote server could be left in a suspended state indefinitely.
+
+`suspend-guarded` prevents this by scheduling an automatic revert on the remote server itself.
+
+```bash
+# Suspend jobs matching "backup", but automatically revert changes in 30 minutes if not manually resumed
+./cronss.sh -h server.com suspend-guarded "backup" 30 maintenance-ID
+```
+
+**How it works:**
+1.  Saves the current crontab to a temporary file *on the remote server* (e.g., `/tmp/cronss_safe_ID.cron`).
+2.  Calculates the revert time (Now + 30 mins) using the remote server's clock.
+3.  Injects a self-destruct job into the active crontab:
+    ```
+    45 10 * * * crontab /tmp/cronss_safe_ID.cron && rm /tmp/cronss_safe_ID.cron
+    ```
+4.  If you run `./cronss.sh resume maintenance-ID` successfully before the timeout, the safety job is removed along with the other changes.
+5.  If you *don't* resume in time, the remote server executes the restore command automatically.
 
 ## Maintenance Window Workflow (Recommended)
 
@@ -141,12 +165,12 @@ Restore everything (overwrites current crontab):
 export CRON_HOST=server.example.com
 export CRON_STATE_NAME=build-${BUILD_ID}
 
-# Suspend jobs
-./cronss.sh suspend "backup"
+# Best Practice: Suspend with auto-revert (30 min timeout)
+./cronss.sh suspend-guarded "backup" 30 "${CRON_STATE_NAME}"
 
 # ... build/deploy ...
 
-# Resume jobs
+# Resume jobs (disarms safety switch)
 ./cronss.sh resume "${CRON_STATE_NAME}"
 ```
 
@@ -164,12 +188,6 @@ State files are stored in `.cronstate/` directory:
 
 ## License
 
-**Copyright (c) 2024-2025 MADRIGAN. All Rights Reserved.**
 
 This software is **Proprietary** and not open-source.
-
-- **Personal Use:** Individuals are granted a license for personal, non-commercial use.
-- **Commercial Use:** Strictly prohibited without a specific Commercial License Grant or contract from MADRIGAN.
-- **Contributions:** Public contributions and pull requests are not accepted.
-
-See the [LICENSE](LICENSE) file for full terms and conditions.
+Rodrigo Marras
